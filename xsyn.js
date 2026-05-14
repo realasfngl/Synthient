@@ -54,6 +54,34 @@ function mix(y) {
 function fRound(state, rk) { return mix(subC(xorBlock(state, rk))); }
 function oRound(state, rk) { return mix(subI(xorBlock(state, rk))); }
 
+// U(key, offset) = prog6: compute 16-byte mask from key+sboxes
+function computeMask(key, offset) {
+  const n = key.length; // 16
+  const buf = new Uint8Array(16);
+  for (let i = 0; i < 16; i++) {
+    const k1 = (key[i % n] ^ ((offset + i * 41) & 255)) & 255;
+    const k2 = (key[(i * 7 + 3) % n] + offset + i) & 255;
+    const tmp = sb0[k1] ^ sb1[k2];
+    const k4 = (tmp + i * 17 + n) & 255;
+    buf[i] = tmp ^ sb2[k4];
+  }
+  return mix(buf);
+}
+
+// T(key) = prog5: normalize key (mix with sbox-derived values)
+function normalizeKey(key) {
+  const n = key.length; // 16
+  const L1 = computeMask(key, 53);
+  const L2 = computeMask(key, 158);
+  const L3 = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = key[i] ^ L1[i & 15] ^ L2[(5 * i) & 15];
+    const b = (29 * i + 7 * n) & 255;
+    L3[i] = a ^ b;
+  }
+  return L3;
+}
+
 function rot128(block, n) {
   const bits = n & 127;
   if (bits === 0) return new Uint8Array(block);
@@ -78,15 +106,23 @@ const D_CONST = Buffer.from("517cc1b727220a94fe13abe8fa9a6ee0", "hex");
 const J_CONST = Buffer.from("6db14acc9e21c820ff28b1d5ef5de2b0", "hex");
 const B_CONST = Buffer.from("db92371d2126e9700324977504e8c90e", "hex");
 
+function keyRounds(keyLen) {
+  if (keyLen === 16) return 12;
+  if (keyLen === 24) return 14;
+  if (keyLen === 32) return 16;
+  throw new Error(`unsupported key length ${keyLen}`);
+}
+
 function keySchedule(keyBytes) {
-  const k = new Uint8Array(keyBytes);
-  const e = k.slice(0, 16);
+  const origKey = new Uint8Array(keyBytes);
+  const nk = normalizeKey(origKey);          // T(key)
+  const e = nk.slice(0, 16);
   const pad = new Uint8Array(16);
-  pad.set(k.slice(16));
+  pad.set(nk.slice(16));                     // zeros for 16-byte key
   const g = xorBlock(fRound(e, D_CONST), pad);
   const D = xorBlock(oRound(g, J_CONST), e);
   const J = xorBlock(fRound(D, B_CONST), g);
-  return [
+  const roundKeys = [
     xorBlock(e, rotY(g, 19)),
     xorBlock(g, rotY(D, 19)),
     xorBlock(D, rotY(J, 19)),
@@ -105,29 +141,26 @@ function keySchedule(keyBytes) {
     xorBlock(rot128(e, 31), J),
     xorBlock(e, rot128(g, 19)),
   ];
+  const rounds  = keyRounds(origKey.length);
+  const inMask  = computeMask(nk, 109);     // U(normalizedKey, 109)
+  const outMask = computeMask(origKey, 199); // U(originalKey, 199)
+  return { roundKeys, rounds, inMask, outMask };
 }
 
-function encBlock(keyBytes, block) {
-  const rk = keySchedule(keyBytes);
-  let s = new Uint8Array(block);
-  s = fRound(s, rk[0]);
-  s = oRound(s, rk[1]);
-  s = fRound(s, rk[2]);
-  s = oRound(s, rk[3]);
-  s = fRound(s, rk[4]);
-  s = oRound(s, rk[5]);
-  s = fRound(s, rk[6]);
-  s = oRound(s, rk[7]);
-  s = fRound(s, rk[8]);
-  s = oRound(s, rk[9]);
-  s = fRound(s, rk[10]);
-  s = xorBlock(s, rk[11]);
+function encBlock(ks, block) {
+  const { roundKeys: rk, rounds, inMask, outMask } = ks;
+  let s = xorBlock(new Uint8Array(block), inMask);
+  for (let i = 0; i < rounds - 1; i++) {
+    s = i % 2 === 0 ? fRound(s, rk[i]) : oRound(s, rk[i]);
+  }
+  s = xorBlock(s, rk[rounds - 1]);
   s = subI(s);
-  s = xorBlock(s, rk[12]);
-  return s;
+  s = xorBlock(s, rk[rounds]);
+  return xorBlock(s, outMask);
 }
 
 function encrypt(keyBytes, iv, pt) {
+  const ks = keySchedule(keyBytes);
   const pad = pt.length % 16 === 0 ? 16 : 16 - pt.length % 16;
   const padded = new Uint8Array(pt.length + pad);
   padded.set(pt);
@@ -136,7 +169,7 @@ function encrypt(keyBytes, iv, pt) {
   let prev = new Uint8Array(iv);
   for (let i = 0; i < padded.length; i += 16) {
     const blk = xorBlock(padded.slice(i, i + 16), prev);
-    const enc = encBlock(keyBytes, blk);
+    const enc = encBlock(ks, blk);
     out.set(enc, i);
     prev = enc;
   }
@@ -373,12 +406,13 @@ const KEY = Buffer.from("syn-key-4f8a91c2");
 const IV  = Buffer.from("syn-iv--7bd03e6a");
 const UA  = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36";
 
-function xsyn(ip, ts = Date.now()) {
-  const ct = encrypt(KEY, IV, serialize([false, "synthient.com", `${ip} - IP Intelligence`, tigerHash(UA), ts]));
+function xsyn(ip, csrf_token, ts = Date.now()) {
+  const iv = csrf_token ? Buffer.from(csrf_token.replace(/-/g, ""), "hex") : IV;
+  const ct = encrypt(KEY, iv, serialize([false, "synthient.com", `${ip} - IP Intelligence`, tigerHash(UA), ts]));
   const out = new Uint8Array(16 + ct.length);
-  out.set(IV); out.set(ct, 16);
+  out.set(iv); out.set(ct, 16);
   return Buffer.from(out).toString("base64");
 }
 
 
-console.log(xsyn("IPHERE")) // apply a timestamp if you wanna regenerate, otherwise it just generates automatically
+console.log(xsyn("IPHERE", "CSRFTOKEN")) // apply a timestamp if you wanna regenerate, otherwise it just generates automatically
