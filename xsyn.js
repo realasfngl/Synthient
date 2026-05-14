@@ -1,131 +1,144 @@
 
-const SBOX = new Uint8Array(Buffer.from(
-  "V0nRxi8zdPuVbYLqDrCoHCjQS5Jc7oWxxAp2PWP5F6+/oRll93oyIAbO5IOdW0zYQl0u6NSbDxM8iWfAcaq29aS+" +
-  "/YwSAJfaeOHPazlDVSYwmMzd61Szj04W+iKldwlh1ipTN0XBbK7vcAiZix3ytOnHn0oxJf5806K9VhSIYAvN4jRQ" +
-  "ntwRBSu3qUj/ZopzA3WG8WqnQMK5LNsfWJQ+7fwboAS4jeZZYpM1fsoh30cV87p/pmnITYc7nAHg3iRSewxoHoCy" +
-  "Wuet1SP0Rj+RyW6EcrsNGNmW8F9BrCfF4zqBbwejefYtOBpEXrXS7MuQmjblKcNPq2RR+BDXvAJ9jmzaw+lOnQo9" +
-  "uDa0OBM0DNm/dJSPt5zl3J4HSU+YLLCTEuvNs5LnQWDjISc75hnSDpERxz8qjqG8K8jFD1vzh4v79d4gxqeEzthl" +
-  "Ucmk70NTJV2bMeg+DdeA/2mKugtzXG5UFWL2NTBSoxbTKDL6ql7P6u14M1gJe2PAwUYe36mZVQTEhjl3guxAGJCX" +
-  "Wd2DH5o3BiRkfKVWSAiF0GEmym9+arZxoHAF0UWMIxzw7omtekvCL9taTXZnFy30y7FKqLUiRzrVEExyzAD54P3i" +
-  "/q74X6vxG0KB1r5EKaZXua/y1HVmu2ifUAIBPH+NGoi9rPfkeZai/G2yawPhLn0UlR0=",
+const SBOX4 = Buffer.from(
+  "Y3x3e/Jrb8UwAWcr/terdsqCyX36WUfwrdSir5ykcsC3/ZMmNj/3zDSl5fFx2DEVBMcjwxiWBZoHEoDi6yeydQmDLBobblqgUjvWsynjL4RT0QDtIPyxW2rLvjlKTFjP0O+q+0NNM4VF+QJ/UDyfqFGjQI+SnTj1vLbaIRD/89LNDBPsX5dEF8Snfj1kXRlzYIFP3CIqkIhG7rgU3l4L2+AyOgpJBiRcwtOsYpGV5HnnyDdtjdVOqWxW9Opleq4IunglLhymtMbo3XQfS72LinA+tWZIA/YOYTVXuYbBHZ7h+JgRadmOlJseh+nOVSjfjKGJDb/mQmhBmS0PsFS7FuJOVPyUwkrMYg1qRjxNi9Fe+mTLtJe+K7x3LgPTGVnBHQZBa1XwmWnqnBiuY9/nuwBzZvuWTIXkOglFqg/uEOstf/QprM+tkY14yJX5L87NCHqIOFyDKihH27jHk6QSU/+HDjE2IVhIAY43dDLK6bG3qwzXxFZCJgeYYNm2uRFA7CCMvaDJhARJI/FPUB8T3NjAnlfjw3tlOwKPPuglkuUV3f0Xqb/Umn7FOWf+dp1Dp+HQ9WjyGzRwBaOK1XmGqDDGUUsepif2NdJuJBaCX9rmdaLvLLIcn11vgApyRJtskAtbM31aUvNhofew1j98be0U4KU9IrP4id5xGq+6tYFSCWrVMDalOL9Ao56B89f7fOM5gpsv/4c0jkNExN7py1R7lDKmwiM97kyVC0L6w04ILqFmKNkksnZboklti9Elcvj2ZIZomBbUpFzMXWW2kmxwSFD97bnaXhVGV6eNnYSQ2KsAjLzTCvfkWAW4s0UG0Cwej8o/DwLBr70DAROKazqREUFPZ9zql/LPzvC05nOWrHQi5601heL5N+gcdd9uR/EacR0pxYlvt2IOqhi+G/xWPkvG0nkgmtvA/njNWvQf3agziAfHMbESEFkngOxfYFF/qRm1Sg0t5Xqfk8mc76DgO02uKvWwyOu7PINTmWEXKwR+unfWJuFpFGNVIQx9MGiZG4e5IXhQOdvhcgliPD5+Xo7xoMyjKh37ttYgxI2BZfWJy513xldDVhfUQBpNwGNs47fIZGpTqjiYDPSb7X8idq/dOgtYZ4gGwzUNAYuMwuZfAiR1k2Ye5eJU2BDOeugILBKXMqu0Jwoj3+/K2bj63DFr0a0ZSb1Rlu7kqEHa/81Vhja+YVL4uw6CSGma4EeeXARLNBV5JqfeKa6S14Tp0rpd88Wwv6Q7cURGK/zrb9X2FP58cFp9/S8YgxalkR8FlXSpwVtKhW0TB09ORbIPyRymvOxzkHvPWY+h+S3ysQCUN5/QLpxuKD+A8D3TJYq150Kzx+r3TBEzA6KsYA==",
   "base64"
-));
-const sbox0 = SBOX.subarray(0, 256);
-const sbox1 = SBOX.subarray(256, 512);
+);
+const sb0 = SBOX4.subarray(0, 256);
+const sb1 = SBOX4.subarray(256, 512);
+const sb2 = SBOX4.subarray(512, 768);
+const sb3 = SBOX4.subarray(768, 1024);
 
-function gfMul(a, b) {
-  let r = 0, p = a, m = b;
-  for (let i = 0; i < 8; i++) {
-    if (m & 1) r ^= p;
-    const hi = p & 128;
-    p = (p << 1) & 255;
-    if (hi) p ^= 29;
-    m >>>= 1;
+function xorBlock(a, b) {
+  const r = new Uint8Array(16);
+  for (let i = 0; i < 16; i++) r[i] = a[i] ^ b[i];
+  return r;
+}
+
+function subC(y) {
+  const Q = new Uint8Array(16);
+  for (let i = 0; i < 16; i += 4) {
+    Q[i] = sb0[y[i]]; Q[i+1] = sb1[y[i+1]]; Q[i+2] = sb2[y[i+2]]; Q[i+3] = sb3[y[i+3]];
   }
-  return r & 255;
+  return Q;
 }
 
-const u32 = v => v >>> 0;
-const b2u = b => ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0;
-const u2b = v => [(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255];
-
-function g0(rk, sw) {
-  const b = u2b(u32(rk ^ sw));
-  const [s0, s1, s2, s3] = [sbox0[b[0]], sbox1[b[1]], sbox0[b[2]], sbox1[b[3]]];
-  return b2u([s0^gfMul(2,s1)^gfMul(4,s2)^gfMul(6,s3), gfMul(2,s0)^s1^gfMul(6,s2)^gfMul(4,s3),
-              gfMul(4,s0)^gfMul(6,s1)^s2^gfMul(2,s3), gfMul(6,s0)^gfMul(4,s1)^gfMul(2,s2)^s3]);
-}
-function g1(rk, sw) {
-  const b = u2b(u32(rk ^ sw));
-  const [s0, s1, s2, s3] = [sbox1[b[0]], sbox0[b[1]], sbox1[b[2]], sbox0[b[3]]];
-  return b2u([s0^gfMul(8,s1)^gfMul(2,s2)^gfMul(10,s3), gfMul(8,s0)^s1^gfMul(10,s2)^gfMul(2,s3),
-              gfMul(2,s0)^gfMul(10,s1)^s2^gfMul(8,s3), gfMul(10,s0)^gfMul(2,s1)^gfMul(8,s2)^s3]);
+function subI(y) {
+  const Q = new Uint8Array(16);
+  for (let i = 0; i < 16; i += 4) {
+    Q[i] = sb2[y[i]]; Q[i+1] = sb3[y[i+1]]; Q[i+2] = sb0[y[i+2]]; Q[i+3] = sb1[y[i+3]];
+  }
+  return Q;
 }
 
-function lfsrStep(v) {
-  return (v & 1) ? (((v ^ 43057) >>> 1) | 32768) & 0xffff : v >>> 1;
+function mix(y) {
+  return new Uint8Array([
+    y[3]^y[4]^y[6]^y[8]^y[9]^y[13]^y[14],
+    y[2]^y[5]^y[7]^y[8]^y[9]^y[12]^y[15],
+    y[1]^y[4]^y[6]^y[10]^y[11]^y[12]^y[15],
+    y[0]^y[5]^y[7]^y[10]^y[11]^y[13]^y[14],
+    y[0]^y[2]^y[5]^y[8]^y[11]^y[14]^y[15],
+    y[1]^y[3]^y[4]^y[9]^y[10]^y[14]^y[15],
+    y[0]^y[2]^y[7]^y[9]^y[10]^y[12]^y[13],
+    y[1]^y[3]^y[6]^y[8]^y[11]^y[12]^y[13],
+    y[0]^y[1]^y[4]^y[7]^y[10]^y[13]^y[15],
+    y[0]^y[1]^y[5]^y[6]^y[11]^y[12]^y[14],
+    y[2]^y[3]^y[5]^y[6]^y[8]^y[13]^y[15],
+    y[2]^y[3]^y[4]^y[7]^y[9]^y[12]^y[14],
+    y[1]^y[2]^y[6]^y[7]^y[9]^y[11]^y[12],
+    y[0]^y[3]^y[6]^y[7]^y[8]^y[10]^y[13],
+    y[0]^y[3]^y[4]^y[5]^y[9]^y[11]^y[14],
+    y[1]^y[2]^y[4]^y[5]^y[8]^y[10]^y[15]
+  ]);
 }
-function rot16(v, s) { v &= 0xffff; return ((v << s) | (v >>> (16 - s))) & 0xffff; }
 
-function genConsts() {
-  const r = []; let s = 17034;
-  for (let i = 0; i < 30; i++) {
-    r.push((((s ^ 47073) << 16) | rot16(~s, 1)) >>> 0);
-    r.push(((((~s & 0xffff) ^ 9279) << 16) | rot16(s, 8)) >>> 0);
-    s = lfsrStep(s);
+function fRound(state, rk) { return mix(subC(xorBlock(state, rk))); }
+function oRound(state, rk) { return mix(subI(xorBlock(state, rk))); }
+
+function rot128(block, n) {
+  const bits = n & 127;
+  if (bits === 0) return new Uint8Array(block);
+  const byteShift = (bits / 8) | 0;
+  const bitShift = bits % 8;
+  const r = new Uint8Array(16);
+  if (bitShift === 0) {
+    for (let i = 0; i < 16; i++) r[i] = block[(i + byteShift) % 16];
+  } else {
+    for (let i = 0; i < 16; i++) {
+      const lo = (i + byteShift) % 16;
+      const hi = (i + byteShift + 1) % 16;
+      r[i] = ((block[lo] << bitShift) | (block[hi] >> (8 - bitShift))) & 0xff;
+    }
   }
   return r;
 }
 
-const M32 = (1n << 32n) - 1n;
-function exBits(p, a, b) {
-  return (p >> BigInt(128 - b - 1)) & ((1n << BigInt(b - a + 1)) - 1n);
-}
-function permute128(st) {
-  let p = 0n;
-  for (const w of st) p = (p << 32n) | BigInt(w >>> 0);
-  let X = exBits(p, 7, 63);
-  X = (X << 7n) | exBits(p, 121, 127);
-  X = (X << 7n) | exBits(p, 0, 6);
-  X = (X << 57n) | exBits(p, 64, 120);
-  return [Number((X>>96n)&M32)>>>0, Number((X>>64n)&M32)>>>0,
-          Number((X>>32n)&M32)>>>0, Number(X&M32)>>>0];
+function rotY(block, n) { return rot128(block, 128 - (127 & n)); }
+
+const D_CONST = Buffer.from("517cc1b727220a94fe13abe8fa9a6ee0", "hex");
+const J_CONST = Buffer.from("6db14acc9e21c820ff28b1d5ef5de2b0", "hex");
+const B_CONST = Buffer.from("db92371d2126e9700324977504e8c90e", "hex");
+
+function keySchedule(keyBytes) {
+  const k = new Uint8Array(keyBytes);
+  const e = k.slice(0, 16);
+  const pad = new Uint8Array(16);
+  pad.set(k.slice(16));
+  const g = xorBlock(fRound(e, D_CONST), pad);
+  const D = xorBlock(oRound(g, J_CONST), e);
+  const J = xorBlock(fRound(D, B_CONST), g);
+  return [
+    xorBlock(e, rotY(g, 19)),
+    xorBlock(g, rotY(D, 19)),
+    xorBlock(D, rotY(J, 19)),
+    xorBlock(rotY(e, 19), J),
+    xorBlock(e, rotY(g, 31)),
+    xorBlock(g, rotY(D, 31)),
+    xorBlock(D, rotY(J, 31)),
+    xorBlock(rotY(e, 31), J),
+    xorBlock(e, rot128(g, 61)),
+    xorBlock(g, rot128(D, 61)),
+    xorBlock(D, rot128(J, 61)),
+    xorBlock(rot128(e, 61), J),
+    xorBlock(e, rot128(g, 31)),
+    xorBlock(g, rot128(D, 31)),
+    xorBlock(D, rot128(J, 31)),
+    xorBlock(rot128(e, 31), J),
+    xorBlock(e, rot128(g, 19)),
+  ];
 }
 
-function feistel(rks, n, st) {
-  let [a, w, x, g] = st;
-  for (let i = 0; i < n; i++) {
-    w = u32(w ^ g0(rks[2*i], a));
-    g = u32(g ^ g1(rks[2*i+1], x));
-    [a, w, x, g] = [w, x, g, a];
-  }
-  return [g, a, w, x];
+function encBlock(keyBytes, block) {
+  const rk = keySchedule(keyBytes);
+  let s = new Uint8Array(block);
+  s = fRound(s, rk[0]);
+  s = oRound(s, rk[1]);
+  s = fRound(s, rk[2]);
+  s = oRound(s, rk[3]);
+  s = fRound(s, rk[4]);
+  s = oRound(s, rk[5]);
+  s = fRound(s, rk[6]);
+  s = oRound(s, rk[7]);
+  s = fRound(s, rk[8]);
+  s = oRound(s, rk[9]);
+  s = fRound(s, rk[10]);
+  s = xorBlock(s, rk[11]);
+  s = subI(s);
+  s = xorBlock(s, rk[12]);
+  return s;
 }
 
-function keySchedule(key) {
-  const C = genConsts();
-  let st = feistel(C.slice(0, 24), 12, key);
-  const sk = [];
-  for (let r = 0; r <= 8; r++) {
-    const t = [0,1,2,3].map(j => u32(st[j] ^ C[24 + 4*r + j]));
-    st = permute128(st);
-    if (r & 1) for (let j = 0; j < 4; j++) t[j] = u32(t[j] ^ key[j]);
-    sk.push(...t);
-  }
-  return [key.slice(), sk];
-}
-
-function b2u32(bytes) {
-  const r = [];
-  for (let i = 0; i < bytes.length; i += 4)
-    r.push(b2u([bytes[i], bytes[i+1], bytes[i+2], bytes[i+3]]));
-  return r;
-}
-function u322b(arr) {
-  const o = new Uint8Array(arr.length * 4);
-  arr.forEach((v, i) => o.set(u2b(v), i * 4));
-  return o;
-}
-
-function encBlock(key, block) {
-  const kw = b2u32(key), bw = b2u32(block);
-  const [kc, sk] = keySchedule(kw);
-  const pre = [bw[0], u32(bw[1]^kc[0]), bw[2], u32(bw[3]^kc[1])];
-  const res = feistel(sk, 18, pre);
-  return u322b([res[0], u32(res[1]^kc[2]), res[2], u32(res[3]^kc[3])]);
-}
-
-function encrypt(key, iv, pt) {
+function encrypt(keyBytes, iv, pt) {
   const pad = pt.length % 16 === 0 ? 16 : 16 - pt.length % 16;
   const padded = new Uint8Array(pt.length + pad);
-  padded.set(pt); padded.fill(pad, pt.length);
+  padded.set(pt);
+  padded.fill(pad, pt.length);
   const out = new Uint8Array(padded.length);
-  let prev = iv;
+  let prev = new Uint8Array(iv);
   for (let i = 0; i < padded.length; i += 16) {
-    const blk = padded.slice(i, i + 16);
-    for (let j = 0; j < 16; j++) blk[j] ^= prev[j];
-    const enc = encBlock(key, blk);
-    out.set(enc, i); prev = enc;
+    const blk = xorBlock(padded.slice(i, i + 16), prev);
+    const enc = encBlock(keyBytes, blk);
+    out.set(enc, i);
+    prev = enc;
   }
   return out;
 }
@@ -334,6 +347,11 @@ function serialize(data) {
     while (v >= 128) { buf.b[buf.p++] = (v & 127) | 128; v >>>= 7; }
     buf.b[buf.p++] = v;
   };
+  const varint64 = (v) => {
+    let n = BigInt(v);
+    while (n >= 128n) { buf.b[buf.p++] = Number(n & 127n) | 128; n >>= 7n; }
+    buf.b[buf.p++] = Number(n);
+  };
   const field = (n, wt) => varint((n << 3) | wt);
   const str = (n, s) => {
     const bytes = enc.encode(s);
@@ -347,6 +365,7 @@ function serialize(data) {
   if (data[1]) str(2, data[1]);
   if (data[2]) str(3, data[2]);
   if (data[3]) str(4, data[3]);
+  if (data[4] != null) { field(5, 0); varint64(data[4]); }
   return buf.b.slice(0, buf.p);
 }
 
@@ -354,11 +373,12 @@ const KEY = Buffer.from("syn-key-4f8a91c2");
 const IV  = Buffer.from("syn-iv--7bd03e6a");
 const UA  = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36";
 
-function xsyn(ip) {
-  const ct = encrypt(KEY, IV, serialize([false, "synthient.com", `${ip} - IP Intelligence`, tigerHash(UA)]));
+function xsyn(ip, ts = Date.now()) {
+  const ct = encrypt(KEY, IV, serialize([false, "synthient.com", `${ip} - IP Intelligence`, tigerHash(UA), ts]));
   const out = new Uint8Array(16 + ct.length);
   out.set(IV); out.set(ct, 16);
   return Buffer.from(out).toString("base64");
 }
 
-console.log(xsyn("IPHERE"))
+
+console.log(xsyn("IPHERE")) // apply a timestamp if you wanna regenerate, otherwise it just generates automatically
