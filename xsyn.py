@@ -187,6 +187,28 @@ def _f_round(state: bytes, rk: bytes) -> bytes:
 def _o_round(state: bytes, rk: bytes) -> bytes:
     return _mix(_sub_i(_xor_block(state, rk)))
 
+def _compute_mask(key: bytes, offset: int) -> bytes:
+    n = len(key)  # 16
+    buf = bytearray(16)
+    for i in range(16):
+        k1 = (key[i % n] ^ ((offset + i * 41) & 255)) & 255
+        k2 = (key[(i * 7 + 3) % n] + offset + i) & 255
+        tmp = _sb0[k1] ^ _sb1[k2]
+        k4 = (tmp + i * 17 + n) & 255
+        buf[i] = tmp ^ _sb2[k4]
+    return _mix(bytes(buf))
+
+def _normalize_key(key: bytes) -> bytes:
+    n = len(key)  # 16
+    L1 = _compute_mask(key, 53)
+    L2 = _compute_mask(key, 158)
+    L3 = bytearray(n)
+    for i in range(n):
+        a = key[i] ^ L1[i & 15] ^ L2[(5 * i) & 15]
+        b = (29 * i + 7 * n) & 255
+        L3[i] = a ^ b
+    return bytes(L3)
+
 def _rot128(block: bytes, n: int) -> bytes:
     n = n & 127
     if n == 0:
@@ -206,13 +228,21 @@ def _rot128(block: bytes, n: int) -> bytes:
 def _rot_y(block: bytes, n: int) -> bytes:
     return _rot128(block, 128 - (127 & n))
 
-def _key_schedule(key: bytes) -> list:
-    e = key[:16]
-    pad = key[16:] + b'\x00' * (16 - len(key[16:]))
+def _key_rounds(key_len: int) -> int:
+    if key_len == 16: return 12
+    if key_len == 24: return 14
+    if key_len == 32: return 16
+    raise ValueError(f"unsupported key length {key_len}")
+
+def _key_schedule(key: bytes) -> dict:
+    orig_key = bytes(key)
+    nk = _normalize_key(orig_key)
+    e = nk[:16]
+    pad = nk[16:] + b'\x00' * (16 - len(nk[16:]))
     g = _xor_block(_f_round(e, _D_CONST), pad)
     d = _xor_block(_o_round(g, _J_CONST), e)
     j = _xor_block(_f_round(d, _B_CONST), g)
-    return [
+    round_keys = [
         _xor_block(e, _rot_y(g, 19)),
         _xor_block(g, _rot_y(d, 19)),
         _xor_block(d, _rot_y(j, 19)),
@@ -231,34 +261,31 @@ def _key_schedule(key: bytes) -> list:
         _xor_block(_rot128(e, 31), j),
         _xor_block(e, _rot128(g, 19)),
     ]
+    rounds = _key_rounds(len(orig_key))
+    in_mask = _compute_mask(nk, 109)
+    out_mask = _compute_mask(orig_key, 199)
+    return {'roundKeys': round_keys, 'rounds': rounds, 'inMask': in_mask, 'outMask': out_mask}
 
-def _enc_block(key: bytes, block: bytes) -> bytes:
-    rk = _key_schedule(key)
-    s = block
-    s = _f_round(s, rk[0])
-    s = _o_round(s, rk[1])
-    s = _f_round(s, rk[2])
-    s = _o_round(s, rk[3])
-    s = _f_round(s, rk[4])
-    s = _o_round(s, rk[5])
-    s = _f_round(s, rk[6])
-    s = _o_round(s, rk[7])
-    s = _f_round(s, rk[8])
-    s = _o_round(s, rk[9])
-    s = _f_round(s, rk[10])
-    s = _xor_block(s, rk[11])
+def _enc_block(ks: dict, block: bytes) -> bytes:
+    rk = ks['roundKeys']
+    rounds = ks['rounds']
+    s = _xor_block(block, ks['inMask'])
+    for i in range(rounds - 1):
+        s = _f_round(s, rk[i]) if i % 2 == 0 else _o_round(s, rk[i])
+    s = _xor_block(s, rk[rounds - 1])
     s = _sub_i(s)
-    s = _xor_block(s, rk[12])
-    return s
+    s = _xor_block(s, rk[rounds])
+    return _xor_block(s, ks['outMask'])
 
 def _encrypt(key: bytes, iv: bytes, pt: bytes) -> bytes:
+    ks = _key_schedule(key)
     pad = 16 - (len(pt) % 16) if len(pt) % 16 != 0 else 16
     padded = pt + bytes([pad] * pad)
     out = b""
     prev = iv
     for i in range(0, len(padded), 16):
         blk = _xor_block(padded[i:i+16], prev)
-        enc = _enc_block(key, blk)
+        enc = _enc_block(ks, blk)
         out += enc
         prev = enc
     return out
@@ -395,13 +422,15 @@ class Xsyn:
     def __init__(self):
         self._ua_hash = _tiger(_UA)
 
-    def generate(self, ip: str, ts: int = None) -> str:
+    def generate(self, ip: str, csrf_token: str, ts: int = None) -> str:
         if ts is None:
             ts = int(time.time() * 1000)
+        iv = bytes.fromhex(csrf_token.replace("-", "")) if csrf_token else _IV
         pt = _serialize([False, "synthient.com", f"{ip} - IP Intelligence", self._ua_hash, ts])
-        ct = _encrypt(_KEY, _IV, pt)
-        return base64.b64encode(_IV + ct).decode()
+        ct = _encrypt(_KEY, iv, pt)
+        return base64.b64encode(iv + ct).decode()
 
 
 if __name__ == "__main__":
-    print(Xsyn().generate("IPHERE")) # apply a timestamp if you wanna regenerate, otherwise it just generates automatically
+
+    print(Xsyn().generate("IPHERE", "CSRFTOKEN")) # apply a timestamp if you wanna regenerate, otherwise it just generates automatically
